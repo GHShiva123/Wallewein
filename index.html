@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walewein en het Vliegende Schaakbord</title>
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-light: #f0d080;
+  --gold-dim: #7a6020;
+  --midnight: #060b18;
+  --navy: #0d1530;
+  --crimson: #8b1a1a;
+  --crimson-bright: #c0392b;
+  --candle: #e8a030;
+  --parchment: #d4b483;
+  --glow-gold: 0 0 20px rgba(201,168,76,0.6), 0 0 60px rgba(201,168,76,0.2);
+  --glow-red: 0 0 20px rgba(192,57,43,0.6), 0 0 60px rgba(139,26,26,0.3);
+  --border-gold: 1px solid rgba(201,168,76,0.3);
+  --border-gold-bright: 1px solid rgba(201,168,76,0.7);
+  --font-display: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+  --font-body: Georgia, 'Times New Roman', serif;
+  --transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-fast: all 0.2s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  background: var(--midnight);
+  color: var(--parchment);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* CANVAS */
+#particle-canvas {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+
+/* NAV */
+#nav-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 200;
+  background: rgba(6,11,24,0.97);
+  border-bottom: var(--border-gold);
+  backdrop-filter: blur(12px);
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 32px;
+  gap: 0;
+}
+.nav-brand {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-right: auto;
+  white-space: nowrap;
+}
+.nav-scenes {
+  display: flex; gap: 4px; align-items: center;
+}
+.nav-scene-btn {
+  padding: 5px 12px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: rgba(201,168,76,0.55);
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  background: none;
+}
+.nav-scene-btn:hover, .nav-scene-btn.active {
+  color: var(--gold);
+  border-color: rgba(201,168,76,0.3);
+  background: rgba(201,168,76,0.08);
+}
+.nav-scene-btn.active { border-color: rgba(201,168,76,0.5); }
+
+/* SLIDE CONTAINER — full viewport height per slide */
+#slides-wrapper {
+  position: relative; z-index: 10;
+  padding-top: 56px;
+}
+
+/* TITLE SLIDE */
+#title-slide {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 80px 40px;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(201,168,76,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 80%, rgba(139,26,26,0.1) 0%, transparent 55%);
+  position: relative; overflow: hidden;
+}
+
+.title-ornament {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 28px;
+  opacity: 0; animation: fadeUp 1s ease 0.4s forwards;
+}
+.orn-line { height: 1px; width: 80px; }
+.orn-line.left  { background: linear-gradient(90deg, transparent, var(--gold)); }
+.orn-line.right { background: linear-gradient(90deg, var(--gold), transparent); }
+.orn-diamond {
+  width: 7px; height: 7px; background: var(--gold);
+  transform: rotate(45deg); box-shadow: var(--glow-gold);
+}
+.orn-text {
+  font-family: var(--font-display); font-size: 0.7rem;
+  letter-spacing: 4px; color: var(--gold-dim); text-transform: uppercase;
+}
+
+.main-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  color: var(--gold);
+  text-shadow: 0 0 40px rgba(201,168,76,0.4), 0 2px 8px rgba(0,0,0,0.9);
+  letter-spacing: 3px; line-height: 1.1; margin-bottom: 10px;
+  opacity: 0; animation: fadeUp 1s ease 0.7s forwards;
+}
+.main-subtitle {
+  font-family: var(--font-display);
+  font-size: clamp(0.85rem, 1.8vw, 1.1rem);
+  color: rgba(201,168,76,0.5);
+  letter-spacing: 5px; text-transform: uppercase; margin-bottom: 36px;
+  opacity: 0; animation: fadeUp 1s ease 0.9s forwards;
+}
+.intro-text {
+  max-width: 580px; font-size: 1.05rem; line-height: 1.85;
+  color: rgba(212,180,131,0.8); font-style: italic; margin-bottom: 52px;
+  opacity: 0; animation: fadeUp 1s ease 1.1s forwards;
+}
+.scenes-overview {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  justify-content: center; margin-bottom: 52px;
+  opacity: 0; animation: fadeUp 1s ease 1.2s forwards;
+}
+.scene-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px;
+  background: rgba(201,168,76,0.06);
+  border: var(--border-gold); cursor: pointer;
+  font-family: var(--font-display); font-size: 0.78rem;
+  color: rgba(201,168,76,0.7); letter-spacing: 1px;
+  transition: var(--transition-fast);
+}
+.scene-pill:hover { background: rgba(201,168,76,0.14); color: var(--gold); border-color: rgba(201,168,76,0.6); }
+.pill-num { color: var(--gold-dim); font-size: 0.65rem; }
+
+.start-btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 15px 40px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.06));
+  border: var(--border-gold-bright); color: var(--gold);
+  font-family: var(--font-display); font-size: 0.95rem;
+  letter-spacing: 3px; text-transform: uppercase; cursor: pointer;
+  transition: var(--transition);
+  opacity: 0; animation: fadeUp 1s ease 1.4s forwards;
+}
+.start-btn:hover { box-shadow: var(--glow-gold); transform: translateY(-2px); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* SCENE SLIDES */
+.scene-slide {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  padding: 72px 0 60px;
+  position: relative;
+}
+
+.scene-slide-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 40px; width: 100%;
+  flex: 1; display: flex; flex-direction: column;
+}
+
+/* Scene header strip */
+.slide-header {
+  display: flex; align-items: flex-start;
+  gap: 24px; margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: var(--border-gold);
+}
+.slide-num {
+  font-family: var(--font-display);
+  font-size: 4rem; color: rgba(201,168,76,0.15);
+  line-height: 1; font-weight: 700; flex-shrink: 0;
+  margin-top: -8px;
+}
+.slide-header-text { flex: 1; }
+.slide-label {
+  font-size: 0.68rem; letter-spacing: 3px;
+  color: var(--gold-dim); text-transform: uppercase; margin-bottom: 5px;
+}
+.slide-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: var(--gold); line-height: 1.2; margin-bottom: 8px;
+}
+.slide-tone {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
+}
+.tone-verwondering { background: rgba(50,80,200,0.2); border: 1px solid rgba(50,80,200,0.35); color: #8097ff; }
+.tone-heroisch     { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); color: var(--gold); }
+.tone-duister      { background: rgba(139,26,26,0.2); border: 1px solid rgba(139,26,26,0.4); color: #e07070; }
+.tone-gespannen    { background: rgba(120,60,160,0.2); border: 1px solid rgba(120,60,160,0.4); color: #c090ff; }
+.tone-griezelig    { background: rgba(40,120,100,0.2); border: 1px solid rgba(40,120,100,0.35); color: #60d0b0; }
+.tone-triomfantelijk { background: rgba(201,168,76,0.25); border: 1px solid var(--gold-dim); color: var(--gold-light); }
+
+.slide-icon { font-size: 2.2rem; flex-shrink: 0; margin-top: 4px; }
+
+/* Main content: video left, info right */
+.slide-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  flex: 1;
+  align-items: start;
+}
+
+/* VIDEO */
+.slide-video-wrap {
+  background: #000;
+  border: 1px solid rgba(201,168,76,0.25);
+  position: relative; overflow: hidden;
+}
+.slide-video-wrap::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.04), transparent);
+  pointer-events: none; z-index: 1;
+}
+.slide-video-wrap video {
+  width: 100%; display: block;
+  height: 100%; max-height: 400px; object-fit: contain;
+  background: #000;
+}
+
+/* INFO PANEL */
+.slide-info { display: flex; flex-direction: column; gap: 20px; }
+
+.info-block {}
+.info-block-label {
+  font-size: 0.63rem; letter-spacing: 3px;
+  color: var(--gold-dim); text-transform: uppercase; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.info-block-label::after {
+  content: ''; flex: 1; height: 1px; background: rgba(201,168,76,0.15);
+}
+
+.summary-text {
+  font-size: 0.95rem; line-height: 1.8; color: rgba(212,180,131,0.85);
+}
+
+.tags-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.char-tag {
+  padding: 4px 12px; background: rgba(201,168,76,0.07);
+  border: var(--border-gold); font-size: 0.75rem; color: var(--gold);
+  letter-spacing: 0.5px; font-family: var(--font-display);
+}
+.symbol-tag {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; background: rgba(139,26,26,0.08);
+  border: 1px solid rgba(139,26,26,0.25); font-size: 0.73rem; color: #e07070;
+}
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.detail-item-label {
+  font-size: 0.62rem; letter-spacing: 2px;
+  color: var(--gold-dim); text-transform: uppercase; margin-bottom: 4px;
+}
+.detail-item-val {
+  font-size: 0.85rem; color: rgba(212,180,131,0.85); line-height: 1.5;
+}
+
+.cinematic-quote {
+  font-style: italic; line-height: 1.8; color: rgba(212,180,131,0.65);
+  font-size: 0.88rem; border-left: 2px solid var(--gold-dim); padding-left: 14px;
+}
+
+/* SLIDE NAVIGATION FOOTER */
+.slide-nav-footer {
+  border-top: var(--border-gold);
+  background: rgba(6,11,24,0.8);
+  padding: 16px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  max-width: 1200px; margin: 32px auto 0; width: 100%;
+  align-self: flex-end;
+}
+.slide-nav-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 24px;
+  border: var(--border-gold); background: rgba(201,168,76,0.05);
+  color: var(--gold); font-family: var(--font-display);
+  font-size: 0.78rem; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: var(--transition-fast);
+}
+.slide-nav-btn:hover { background: rgba(201,168,76,0.12); box-shadow: var(--glow-gold); }
+.slide-nav-btn:disabled { opacity: 0.25; cursor: default; box-shadow: none; }
+
+.slide-progress {
+  display: flex; align-items: center; gap: 10px;
+}
+.progress-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(201,168,76,0.35);
+  cursor: pointer; transition: var(--transition-fast);
+  background: transparent;
+}
+.progress-dot.active {
+  background: var(--gold); border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(201,168,76,0.8);
+}
+.progress-dot:hover { border-color: var(--gold); background: rgba(201,168,76,0.3); }
+
+/* SEPARATOR between slides */
+.slide-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent);
+  margin: 0 40px;
+}
+
+/* DIVIDER TEXT */
+.divider-ornate {
+  display: flex; align-items: center; gap: 14px;
+  justify-content: center; padding: 20px 0;
+}
+.divider-ornate .line { width: 60px; height: 1px; background: var(--gold-dim); }
+.divider-ornate span { color: var(--gold); font-size: 1rem; }
+
+/* OVERVIEW SECTION */
+#overview-section {
+  position: relative; z-index: 10;
+  padding: 80px 40px;
+  max-width: 1200px; margin: 0 auto;
+}
+
+.overview-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: var(--gold); text-align: center;
+  letter-spacing: 3px; margin-bottom: 8px;
+}
+.overview-sub {
+  text-align: center; font-size: 0.82rem; letter-spacing: 2px;
+  color: var(--gold-dim); text-transform: uppercase; margin-bottom: 48px;
+}
+
+/* QUEST CHAIN */
+.quest-chain {
+  display: flex; align-items: flex-start;
+  gap: 0; overflow-x: auto; padding: 20px 0 32px;
+  scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+}
+.quest-step {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 120px; cursor: pointer;
+}
+.quest-step:hover .qnode { transform: scale(1.12); box-shadow: 0 0 24px rgba(201,168,76,0.7); }
+.qnode {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid var(--gold); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 1.3rem; margin-bottom: 10px;
+  transition: var(--transition); box-shadow: var(--glow-gold);
+}
+.qlabel {
+  font-family: var(--font-display); font-size: 0.7rem;
+  color: var(--gold); text-align: center; max-width: 100px;
+  line-height: 1.3; letter-spacing: 0.5px;
+}
+.qconnect {
+  width: 64px; height: 2px;
+  background: linear-gradient(90deg, rgba(201,168,76,0.5), rgba(201,168,76,0.2));
+  flex-shrink: 0; margin-top: 29px; position: relative;
+}
+.qconnect::after {
+  content: '›'; position: absolute; right: -6px; top: -10px;
+  color: var(--gold); font-size: 1rem;
+}
+
+/* CHARACTERS GRID */
+.chars-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px; margin-bottom: 60px;
+}
+.char-card {
+  background: rgba(13,21,48,0.8); border: var(--border-gold);
+  padding: 22px 18px; text-align: center;
+  transition: var(--transition); cursor: default;
+}
+.char-card:hover { border-color: rgba(201,168,76,0.55); transform: translateY(-3px); }
+.char-emoji { font-size: 2rem; margin-bottom: 10px; }
+.char-name {
+  font-family: var(--font-display); font-size: 0.95rem;
+  color: var(--gold); margin-bottom: 3px; letter-spacing: 0.5px;
+}
+.char-role {
+  font-size: 0.7rem; color: var(--gold-dim);
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px;
+}
+.char-desc { font-size: 0.8rem; color: rgba(212,180,131,0.7); line-height: 1.5; }
+
+/* THEMES */
+.themes-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px; margin-bottom: 60px;
+}
+.theme-card {
+  background: rgba(13,21,48,0.7); border: var(--border-gold);
+  padding: 28px 24px; transition: var(--transition);
+}
+.theme-card:hover { border-color: rgba(201,168,76,0.45); transform: translateY(-3px); }
+.theme-icon { font-size: 1.8rem; margin-bottom: 12px; }
+.theme-name {
+  font-family: var(--font-display); font-size: 1rem;
+  color: var(--gold); margin-bottom: 8px;
+}
+.theme-desc { font-size: 0.85rem; line-height: 1.7; color: rgba(212,180,131,0.72); }
+
+/* MYSTERY */
+#mystery-block {
+  background: linear-gradient(135deg, rgba(60,10,10,0.2), rgba(13,21,48,0.8));
+  border: 1px solid rgba(139,26,26,0.35);
+  padding: 48px 40px; text-align: center; max-width: 720px; margin: 0 auto 60px;
+}
+.mystery-title {
+  font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: var(--crimson-bright); text-shadow: var(--glow-red);
+  letter-spacing: 3px; margin-bottom: 16px;
+}
+.mystery-q {
+  font-family: var(--font-display); font-size: clamp(1rem, 2vw, 1.35rem);
+  color: var(--parchment); font-style: italic; margin-bottom: 24px; line-height: 1.6;
+}
+.mystery-txt {
+  font-size: 0.9rem; line-height: 1.9; color: rgba(212,180,131,0.72); margin-bottom: 36px;
+}
+.vote-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+.vote-btn {
+  padding: 12px 32px; font-family: var(--font-display);
+  font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: var(--transition); border: none;
+}
+.vote-yes { background: rgba(201,168,76,0.15); border: var(--border-gold-bright); color: var(--gold); }
+.vote-yes:hover { box-shadow: var(--glow-gold); transform: translateY(-2px); }
+.vote-no  { background: rgba(139,26,26,0.15); border: 1px solid rgba(139,26,26,0.5); color: #e07070; }
+.vote-no:hover  { box-shadow: var(--glow-red);  transform: translateY(-2px); }
+.vote-result {
+  margin-top: 20px; font-family: var(--font-display); font-size: 1rem;
+  color: var(--gold); min-height: 28px; letter-spacing: 1px;
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.vote-result.show { opacity: 1; }
+
+/* FOOTER */
+footer {
+  position: relative; z-index: 10;
+  border-top: var(--border-gold); padding: 36px 40px;
+  text-align: center; background: rgba(6,11,24,0.9);
+}
+.footer-main { font-family: var(--font-display); font-size: 1rem; color: var(--gold-dim); letter-spacing: 2px; }
+.footer-sub  { font-size: 0.75rem; color: rgba(212,180,131,0.35); letter-spacing: 1.5px; margin-top: 6px; }
+
+/* SOUND BTN */
+#sound-btn {
+  position: fixed; bottom: 20px; right: 20px; z-index: 300;
+  width: 44px; height: 44px; background: rgba(6,11,24,0.95);
+  border: var(--border-gold); color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 1.1rem; transition: var(--transition-fast);
+}
+#sound-btn:hover { box-shadow: var(--glow-gold); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--midnight); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+/* RESPONSIVE */
+@media (max-width: 860px) {
+  .slide-body { grid-template-columns: 1fr; }
+  .slide-video-wrap video { max-height: 260px; }
+  #nav-bar { padding: 0 16px; }
+  .nav-scenes { display: none; }
+  .scene-slide-inner { padding: 0 20px; }
+  .slide-nav-footer { padding: 14px 20px; }
+  .overview-section { padding: 60px 20px; }
+  .detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .slide-num { display: none; }
+  .vote-row { flex-direction: column; align-items: center; }
+  .vote-btn { width: 220px; }
+}
+
+/* ============ PRESENTATION MODE ============ */
+/* Large prominent slide navigation */
+.slide-nav-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 32px 0 16px; margin-top: auto;
+  border-top: 1px solid rgba(201,168,76,0.12);
+}
+.slide-nav-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 28px;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.35);
+  color: var(--gold); font-family: var(--font-display);
+  font-size: 0.85rem; letter-spacing: 2px; cursor: pointer;
+  transition: var(--transition); text-transform: uppercase;
+  min-width: 200px; justify-content: center;
+}
+.slide-nav-btn:hover {
+  background: rgba(201,168,76,0.18);
+  border-color: rgba(201,168,76,0.7);
+  box-shadow: var(--glow-gold);
+}
+/* Progress dots bigger */
+.progress-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(201,168,76,0.2);
+  border: 1px solid rgba(201,168,76,0.3);
+  cursor: pointer; transition: var(--transition-fast);
+}
+.progress-dot.active {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(201,168,76,0.6);
+}
+/* Keyboard hint */
+#kb-hint {
+  position: fixed; bottom: 20px; right: 24px;
+  font-size: 0.65rem; color: rgba(201,168,76,0.3);
+  letter-spacing: 1px; z-index: 100;
+  font-family: var(--font-display);
+}
+/* Video styling — bigger and centered */
+.video-wrap {
+  border: 1px solid rgba(201,168,76,0.25);
+  background: #000;
+  border-radius: 2px; overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.video-wrap video {
+  width: 100%; display: block;
+  max-height: 420px; object-fit: contain;
+}
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<!-- NAV -->
+<nav id="nav-bar">
+  <div class="nav-brand">Walewein en het Vliegende Schaakbord</div>
+  <div class="nav-scenes" id="nav-scenes">
+    <button class="nav-scene-btn" onclick="goToSlide(0)">Intro</button>
+    <button class="nav-scene-btn" onclick="goToSlide(1)">I — Schaakbord</button>
+    <button class="nav-scene-btn" onclick="goToSlide(2)">II — Koning Wonder</button>
+    <button class="nav-scene-btn" onclick="goToSlide(3)">III — Zwaard</button>
+    <button class="nav-scene-btn" onclick="goToSlide(4)">IV — Assentijn</button>
+    <button class="nav-scene-btn" onclick="goToSlide(5)">V — Spook</button>
+    <button class="nav-scene-btn" onclick="goToSlide(6)">VI — Terugkeer</button>
+    <button class="nav-scene-btn" onclick="goToSlide(7)">Overzicht</button>
+  </div>
+  <button id="sound-btn" onclick="toggleSound()" title="Geluid">🔇</button>
+</nav>
+
+<div id="slides-wrapper">
+
+<!-- ======================================================
+     SLIDE 0: TITEL
+     ====================================================== -->
+<section id="slide-0" class="scene-slide" style="justify-content:center;min-height:calc(100vh - 56px);">
+  <div id="title-slide" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 40px;">
+    <div class="title-ornament">
+      <div class="orn-line left"></div>
+      <div class="orn-diamond"></div>
+      <span class="orn-text">Middeleeuws Riddergedicht · ca. 1350</span>
+      <div class="orn-diamond"></div>
+      <div class="orn-line right"></div>
+    </div>
+
+    <h1 class="main-title">Walewein<br>en het Vliegende<br>Schaakbord</h1>
+    <div class="main-subtitle">Penninc &amp; Pieter Vostaert</div>
+
+    <div class="divider-ornate" style="opacity:0;animation:fadeUp 1s ease 1s forwards;">
+      <div class="line"></div>
+      <span>⚔</span><span>♟</span><span>🏰</span>
+      <div class="line"></div>
+    </div>
+
+    <p class="intro-text">
+      Een ridder van Artur's hof jaagt een betoverd schaakbord na door koninkrijken die op geen enkele kaart staan.
+      Moed, tovenarij en liefde grijpen in elkaar in dit Vlaamse Arturridderverhaal —
+      een queeste die Walewein tot het uiterste drijft.
+    </p>
+
+    <div class="scenes-overview">
+      <div class="scene-pill" onclick="goToSlide(1)"><span class="pill-num">I</span> Het Vliegende Schaakbord</div>
+      <div class="scene-pill" onclick="goToSlide(2)"><span class="pill-num">II</span> Walewein en Koning Wonder</div>
+      <div class="scene-pill" onclick="goToSlide(3)"><span class="pill-num">III</span> Het Zwaard met Twee Ringen</div>
+      <div class="scene-pill" onclick="goToSlide(4)"><span class="pill-num">IV</span> Het Kasteel van Assentijn</div>
+      <div class="scene-pill" onclick="goToSlide(5)"><span class="pill-num">V</span> Het Spook van de Rode Ridder</div>
+      <div class="scene-pill" onclick="goToSlide(6)"><span class="pill-num">VI</span> Terugkeer naar Koning Artur</div>
+    </div>
+
+    <button class="start-btn" onclick="goToSlide(1)">Begin →</button>
+  </div>
+
+  <div class="slide-nav-footer" style="max-width:none;margin:0;border-top:var(--border-gold);background:rgba(6,11,24,0.6);">
+    <span></span>
+    <div class="slide-progress" id="progress-0"></div>
+    <button class="slide-nav-btn" onclick="goToSlide(1)">Volgende: Het Schaakbord →</button>
+  </div>
+</section>
+
+<div class="slide-separator"></div>
+<!-- ======================================================
+     SLIDE 1: SCÈNE 1
+     ====================================================== -->
+<section id="slide-1" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">01</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Één</div>
+        <h2 class="slide-title">Het Vliegende Schaakbord</h2>
+        <span class="slide-tone tone-verwondering">✨ Verwondering</span>
+      </div>
+      <div class="slide-icon">♟️</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene1.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">Een gouden schaakbord vol edelstenen zweeft zonder enige uitleg de zaal van Koning Artur binnen. Iedereen staat versteld. Walewein raakt zo gefascineerd door het bord dat hij zweert het terug te halen — en zo begint de grootste queeste van zijn leven.</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">Het vliegende schaakbord achtervolgen en terughalen</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">De grote zaal van Artur's hof</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">👑 Koning Artur</span><span class="char-tag">♟️ Het Betoverde Schaakbord</span><span class="char-tag">🛡️ Ridders van de Ronde Tafel</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">♟️ Het schaakbord — een goddelijke roeping</span><span class="symbol-tag">💨 Vlucht — het onbereikbare</span><span class="symbol-tag">🌟 Goud — hoofse schoonheid</span><span class="symbol-tag">🏰 Camelot — orde verstoord</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Het schaakbord hing in het kaarslicht van Artur's zaal — zwevend, onverstoorbaar, als een visioen dat niemand durfde aan te raken. Toen stond Walewein op."</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(0)">← Intro</button>
+      <div class="slide-progress" id="progress-1"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(2)">Volgende: Koning Wonder →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 2: SCÈNE 2
+     ====================================================== -->
+<section id="slide-2" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">02</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Twee</div>
+        <h2 class="slide-title">Walewein Ontmoet Koning Wonder</h2>
+        <span class="slide-tone tone-heroisch">⚔️ Heroïsch</span>
+      </div>
+      <div class="slide-icon">👑</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene2.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">Walewein volgt het schaakbord naar een vreemd koninkrijk dat niet op de kaart staat. De heerser is Koning Wonder. Hij wil het bord niet zomaar afstaan — Walewein moet eerst het Zwaard met Twee Ringen gaan halen van een verre koning.</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">Onderhandelen met Koning Wonder en de tegenqueeste aanvaarden</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">Het buitenaardse paleis van Koning Wonder</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">👑 Koning Wonder</span><span class="char-tag">🌺 Prinses Ysabele (eerste glimp)</span><span class="char-tag">🦊 Vos Roges (bondgenoot)</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">⚖️ Hoofse onderhandeling</span><span class="symbol-tag">🏰 Buitenaardse macht</span><span class="symbol-tag">💡 Loyaliteit op de proef</span><span class="symbol-tag">🌀 Ketting van questen</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Koning Wonder zat op een troon van zwart steen, het schaakbord naast hem alsof het een gehoorzame havik was. 'Breng mij het Zwaard met Twee Ringen,' zei hij, 'en wat je zoekt is van jou.'"</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(1)">← Het Schaakbord</button>
+      <div class="slide-progress" id="progress-2"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(3)">Volgende: Het Zwaard →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 3: SCÈNE 3
+     ====================================================== -->
+<section id="slide-3" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">03</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Drie</div>
+        <h2 class="slide-title">Koning Amoraen en het Zwaard met Twee Ringen</h2>
+        <span class="slide-tone tone-duister">🗡️ Donker Gevaar</span>
+      </div>
+      <div class="slide-icon">⚔️</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene3.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">Walewein reist naar het hof van de gevreesde Koning Amoraen, die het Zwaard met Twee Ringen bewaakt. Amoraen geeft zijn schat niet zomaar af. Walewein moet slim en dapper zijn — en misschien ook verliefd worden.</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">Het Zwaard met Twee Ringen bemachtigen van Amoraen</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">Het versterkte rijk van Koning Amoraen — kerkers, zalen en geheime kamers</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">💀 Koning Amoraen</span><span class="char-tag">🌺 Prinses Ysabele</span><span class="char-tag">🦊 Vos Roges</span><span class="char-tag">🗡️ Het Zwaard met Twee Ringen</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">🗡️ Zwaard — heilige macht</span><span class="symbol-tag">💍 Twee ringen — onbreekbare eden</span><span class="symbol-tag">❤️ Liefde — Walewein en Ysabele</span><span class="symbol-tag">🦊 Slimheid boven kracht</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Amoraen's zwaard hing boven zijn troon als een tweede kroon — de twee ringen glinsteren in het vuurlicht. Walewein wist dat hij niet het wapen moest veroveren, maar de mensen die het bewaakten."</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(2)">← Koning Wonder</button>
+      <div class="slide-progress" id="progress-3"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(4)">Volgende: Kasteel Assentijn →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 4: SCÈNE 4
+     ====================================================== -->
+<section id="slide-4" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">04</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Vier</div>
+        <h2 class="slide-title">Het Kasteel van Assentijn</h2>
+        <span class="slide-tone tone-gespannen">🔮 Tovenarij en Verraad</span>
+      </div>
+      <div class="slide-icon">🏰</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene4.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">Walewein en Ysabele zoeken onderdak in het mysterieuze Kasteel van Assentijn — een plek vol donkere betoveringen. De kasteelheer heeft zijn eigen ambities. Walewein moet valkuilen, toverij en verraad overleven om zijn queeste voort te zetten.</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">Overleven in Assentijns kasteel en de magische vallen ontwijken</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">Het kasteel van Assentijn — een labyrintisch slot omhuld door tovenarij</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">🌺 Ysabele</span><span class="char-tag">🧙 Heer Assentijn</span><span class="char-tag">🦊 Vos Roges</span><span class="char-tag">👥 Betoverde Bewakers</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">🔮 Magie — schijn tegenover werkelijkheid</span><span class="symbol-tag">🕸️ Gevangenis</span><span class="symbol-tag">🗝️ Verborgen waarheden</span><span class="symbol-tag">🤝 Vertrouwen en verraad</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Het kasteel ademde — de stenen pulseerden. Gangen verschoven. Deuren doken op waar muren hadden gestaan. En toch vonden Walewein en Ysabele elkaar midden in dit levende doolhof."</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(3)">← Het Zwaard</button>
+      <div class="slide-progress" id="progress-4"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(5)">Volgende: Het Spook →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 5: SCÈNE 5
+     ====================================================== -->
+<section id="slide-5" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">05</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Vijf</div>
+        <h2 class="slide-title">Het Spook van de Rode Ridder</h2>
+        <span class="slide-tone tone-griezelig">👻 Griezelig en Bovennatuurlijk</span>
+      </div>
+      <div class="slide-icon">👻</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene5.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">De geest van een gevallen Rode Ridder teistert de wegen terug naar Camelot. Walewein moet de slag aanbinden met deze bovennatuurlijke vijand — een gevecht tussen levenden en doden, waarbij moed alleen niet genoeg is.</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">De geest van de Rode Ridder verslaan en zijn rusteloze ziel verlossen</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">Spookachtige bosroutes en een vervloekt ruïne-fort</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">👻 Het Spook van de Rode Ridder</span><span class="char-tag">🌺 Ysabele</span><span class="char-tag">🦊 Vos Roges</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">🔴 Rood — bloedvergieten en wraak</span><span class="symbol-tag">👻 Ondood — onopgeloste zonden</span><span class="symbol-tag">⚔️ Gevecht als reiniging</span><span class="symbol-tag">🌑 Nacht — angst zichtbaar gemaakt</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Hij kwam op middernacht, zijn harnas de kleur van oud bloed, zijn ogen twee sintelende vlammen in een leeg vizier. De Rode Ridder was gestorven op deze wegen — en de dood had alleen zijn woede aangescherpt."</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(4)">← Kasteel Assentijn</button>
+      <div class="slide-progress" id="progress-5"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(6)">Volgende: Terugkeer →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 6: SCÈNE 6
+     ====================================================== -->
+<section id="slide-6" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div class="slide-header">
+      <div class="slide-num">06</div>
+      <div class="slide-header-text">
+        <div class="slide-label">Scène Zes</div>
+        <h2 class="slide-title">De Terugkeer naar Koning Artur</h2>
+        <span class="slide-tone tone-triomfantelijk">🏆 Triomf en Raadsel</span>
+      </div>
+      <div class="slide-icon">🏆</div>
+    </div>
+
+    <div class="slide-body">
+
+      <div class="slide-video-wrap">
+        <video controls preload="auto">
+          <source src="scene6.mp4" type="video/mp4" type="video/mp4">
+          Uw browser ondersteunt geen HTML5-video.
+        </video>
+      </div>
+
+      <div class="slide-info">
+
+        <div class="info-block">
+          <div class="info-block-label">Samenvatting</div>
+          <p class="summary-text">Walewein keert zegevierend terug naar Camelot met het schaakbord, het zwaard — en Ysabele aan zijn zijde. Het hof viert feest, Artur is verrukt. Maar het verhaal eindigt met een open vraag: wat wacht er nog voor de ridder en de prinses?</p>
+        </div>
+
+        <div class="info-block">
+          <div class="detail-grid">
+            <div>
+              <div class="detail-item-label">Doel</div>
+              <div class="detail-item-val">Terugkeren naar Artur's hof en de queeste voltooien</div>
+            </div>
+            <div>
+              <div class="detail-item-label">Locatie</div>
+              <div class="detail-item-val">De grote zaal van Camelot — banieren, feestmaal en het voltallige hof</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Personages</div>
+          <div class="tags-row"><span class="char-tag">⚔️ Walewein</span><span class="char-tag">👑 Koning Artur</span><span class="char-tag">🌺 Ysabele</span><span class="char-tag">🛡️ Ridders van de Ronde Tafel</span><span class="char-tag">♟️ Het Schaakbord</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Symbolen &amp; Thema's</div>
+          <div class="tags-row"><span class="symbol-tag">🏆 Terugkeer — de voltooide cirkel</span><span class="symbol-tag">❤️ Liefde's dubbelzinnigheid</span><span class="symbol-tag">♟️ Schaakbord — lot vervuld</span><span class="symbol-tag">❓ Het opengelaten einde</span></div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-label">Citaat</div>
+          <p class="cinematic-quote">"Het schaakbord stond op een tafel van wit steen naast Arturs rechterhand. Walewein stond voor zijn koning, zijn queeste volbracht. Maar zijn ogen zochten Ysabele — wachtend op wat de belofte van een ridder werkelijk betekende."</p>
+        </div>
+
+      </div>
+    </div><!-- end slide-body -->
+
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(5)">← Het Spook</button>
+      <div class="slide-progress" id="progress-6"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(7)">Volgende: Overzicht →</button>
+    </div>
+
+  </div>
+</section>
+<div class="slide-separator"></div>
+
+<!-- ======================================================
+     SLIDE 7: OVERZICHT
+     ====================================================== -->
+<section id="slide-7" class="scene-slide">
+  <div class="scene-slide-inner">
+
+    <div style="text-align:center;margin-bottom:40px;padding-top:20px;">
+      <h2 class="overview-title" style="font-family:var(--font-display);font-size:clamp(1.5rem,3vw,2.2rem);color:var(--gold);letter-spacing:3px;margin-bottom:6px;">Overzicht</h2>
+      <p style="font-size:0.8rem;letter-spacing:2px;color:var(--gold-dim);text-transform:uppercase;">Queesteketen · Personages · Thema's</p>
+    </div>
+
+    <!-- QUEST CHAIN -->
+    <div style="margin-bottom:48px;">
+      <div class="info-block-label" style="font-size:0.68rem;letter-spacing:3px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;">Queesteketen<span style="flex:1;height:1px;background:rgba(201,168,76,0.15);display:block;"></span></div>
+      <div class="quest-chain">
+        <div class="quest-step" onclick="goToSlide(1)"><div class="qnode">♟️</div><div class="qlabel">Schaakbord verschijnt</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(1)"><div class="qnode">🏇</div><div class="qlabel">Walewein achtervolgt</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(2)"><div class="qnode">👑</div><div class="qlabel">Koning Wonder stelt een prijs</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(3)"><div class="qnode">🗡️</div><div class="qlabel">Zoek het Zwaard</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(3)"><div class="qnode">🌺</div><div class="qlabel">Ontmoeting Ysabele</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(4)"><div class="qnode">🏰</div><div class="qlabel">Kasteel Assentijn</div></div>
+        <div class="qconnect"></div>
+        <div class="quest-step" onclick="goToSlide(5)"><div class="qnode">👻</div><div class="qlabel">Spook verslagen</div></div>
+        <div class="quest-step" onclick="goToSlide(6)"><div class="qnode">🏆</div><div class="qlabel">Triomfantelijke terugkeer</div></div>
+      </div>
+    </div>
+
+    <!-- PERSONAGES -->
+    <div style="margin-bottom:40px;">
+      <div class="info-block-label" style="font-size:0.68rem;letter-spacing:3px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;">Personages<span style="flex:1;height:1px;background:rgba(201,168,76,0.15);display:block;"></span></div>
+      <div class="chars-grid">
+        <div class="char-card"><div class="char-emoji">⚔️</div><div class="char-name">Walewein</div><div class="char-role">Hoofdpersonage · Ridder</div><div class="char-desc">Arturs beste ridder. Zijn queeste verbindt alle andere verhaallijnen.</div></div>
+        <div class="char-card"><div class="char-emoji">👑</div><div class="char-name">Koning Artur</div><div class="char-role">Leenheer</div><div class="char-desc">Zijn hof is het begin- en eindpunt van het hele avontuur.</div></div>
+        <div class="char-card"><div class="char-emoji">🌺</div><div class="char-name">Prinses Ysabele</div><div class="char-role">Liefdesbelang · Prinses</div><div class="char-desc">Moedig en intelligent. Ze is slim en dapper — en uiteindelijk Waleweins reden om naar huis te willen.</div></div>
+        <div class="char-card"><div class="char-emoji">🪄</div><div class="char-name">Koning Wonder</div><div class="char-role">Bovennatuurlijke Heerser</div><div class="char-desc">Eigenaar van het schaakbord. Hij stelt de voorwaarden — en maakt het avontuur zo veel groter.</div></div>
+        <div class="char-card"><div class="char-emoji">💀</div><div class="char-name">Koning Amoraen</div><div class="char-role">Antagonist · Koning</div><div class="char-desc">Vader van Ysabele en bewaarder van het Zwaard. Zijn eigenzinnigheid maakt hem tot een gevaarlijke tegenstander.</div></div>
+        <div class="char-card"><div class="char-emoji">🦊</div><div class="char-name">Vos Roges</div><div class="char-role">Sluwe Bondgenoot</div><div class="char-desc">Een pratende vos met verrassend goede raad. Juist op de moeilijkste momenten.</div></div>
+        <div class="char-card"><div class="char-emoji">🧙</div><div class="char-name">Heer Assentijn</div><div class="char-role">Tovenaar · Gastheer</div><div class="char-desc">Meester van een betoverd kasteel. Of hij vriend of vijand is, blijft lang onduidelijk.</div></div>
+        <div class="char-card"><div class="char-emoji">👻</div><div class="char-name">De Rode Ridder</div><div class="char-role">Bovennatuurlijke Vijand</div><div class="char-desc">Een ridder die zelfs na zijn dood niet tot rust komt. Pure, onstuitbare wraaklust.</div></div>
+      </div>
+    </div>
+
+    <!-- THEMA'S -->
+    <div style="margin-bottom:48px;">
+      <div class="info-block-label" style="font-size:0.68rem;letter-spacing:3px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;">Thema's<span style="flex:1;height:1px;background:rgba(201,168,76,0.15);display:block;"></span></div>
+      <div class="themes-grid">
+        <div class="theme-card"><div class="theme-icon">♟️</div><div class="theme-name">Het Onbereikbare Object</div><div class="theme-desc">Het schaakbord is nooit zomaar een schaakbord. Het trekt Walewein over de rand van de bekende wereld — en dat is precies de bedoeling.</div></div>
+        <div class="theme-card"><div class="theme-icon">⛓️</div><div class="theme-name">De Ketting van Questen</div><div class="theme-desc">Elke queeste brengt een nieuwe met zich mee. Om het schaakbord te krijgen, moet Walewein eerst het zwaard halen. En zo gaat het maar door — één doel onthult altijd het volgende.</div></div>
+        <div class="theme-card"><div class="theme-icon">❤️</div><div class="theme-name">Liefde versus Plicht</div><div class="theme-desc">Waleweins liefde voor Ysabele staat op gespannen voet met zijn riddereed. Kan een ridder tegelijk trouw zijn aan zijn heer én aan zijn hart? Het verhaal geeft geen makkelijk antwoord.</div></div>
+        <div class="theme-card"><div class="theme-icon">🦊</div><div class="theme-name">Slimheid en Ridderlijkheid</div><div class="theme-desc">Vos Roges bewijst het: wijsheid kan er heel anders uitzien dan je verwacht. Waleweins kracht zit niet alleen in zijn zwaard, maar ook in weten wanneer hij moet luisteren.</div></div>
+        <div class="theme-card"><div class="theme-icon">👻</div><div class="theme-name">Het Bovennatuurlijke</div><div class="theme-desc">Het verhaal wemelt van de magie: pratende dieren, zwevende voorwerpen, spookridders, betoverde kastelen. Zonder het bovennatuurlijke is er geen echte heldhaftigheid.</div></div>
+        <div class="theme-card"><div class="theme-icon">❓</div><div class="theme-name">Het Opengelaten Einde</div><div class="theme-desc">Het handschrift eindigt terwijl het verhaal nog niet klaar is. Trouwen Walewein en Ysabele? Die stilte is misschien wel de krachtigste "zin" van het hele gedicht.</div></div>
+      </div>
+    </div>
+
+    <!-- MYSTERIE -->
+    <div id="mystery-block">
+      <div style="font-size:2.5rem;margin-bottom:16px;">❓</div>
+      <h3 class="mystery-title">Het Onafgemaakte Verhaal</h3>
+      <p class="mystery-q">"Trouwen Walewein en Ysabele?"</p>
+      <p class="mystery-txt">
+        Het middeleeuwse handschrift van <em>Walewein</em> — begonnen door Penninc en voltooid door Pieter Vostaert rond 1350 —
+        breekt af voordat het verhaal zijn natuurlijke conclusie bereikt. We zien Walewein terugkeren naar Camelot
+        met het schaakbord, het zwaard en Ysabele naast hem. Artur viert feest. Het hof jubelt.
+        En dan zwijgt het perkament. Al acht eeuwen laten de dichters lezers achter met een onbeantwoorde vraag.
+        Is het einde ooit verloren gegaan — of stond het er nooit? Misschien vonden de dichters dat sommige liefdes beter leven in het onuitgesproken.
+      </p>
+      <p style="font-style:italic;color:var(--gold-dim);font-size:0.82rem;margin-bottom:32px;letter-spacing:1px;">— Wat denk jij? —</p>
+      <div class="vote-row">
+        <button class="vote-btn vote-yes" onclick="castVote('yes')">⚔️ Ja — Ze trouwden</button>
+        <button class="vote-btn vote-no"  onclick="castVote('no')">🌑 Nee — Het verhaal bleef open</button>
+      </div>
+      <div class="vote-result" id="vote-result"></div>
+    </div>
+
+    <!-- NAV FOOTER -->
+    <div class="slide-nav-footer">
+      <button class="slide-nav-btn" onclick="goToSlide(6)">← Terugkeer naar Artur</button>
+      <div class="slide-progress" id="progress-7"></div>
+      <button class="slide-nav-btn" onclick="goToSlide(0)">↑ Terug naar Intro</button>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- end slides-wrapper -->
+
+<footer>
+  <div class="divider-ornate" style="margin-bottom:20px;">
+    <div class="line"></div><span>⚔</span><span>♟</span><span>⚔</span><div class="line"></div>
+  </div>
+  <div class="footer-main">Walewein en het Vliegende Schaakbord</div>
+  <div class="footer-sub">Penninc &amp; Pieter Vostaert · ca. 1350 · Vlaams Arturgedicht</div>
+  <div class="footer-sub" style="margin-top:8px;font-size:0.68rem;opacity:0.35;">Schoolpresentatie</div>
+</footer>
+<div id="kb-hint">← → pijltjestoetsen om te navigeren</div>
+
+<script>
+/* ============================================================
+   NAVIGATION — go to a slide by index
+   ============================================================ */
+const TOTAL_SLIDES = 8; // 0..7
+
+function goToSlide(idx) {
+  const el = document.getElementById('slide-' + idx);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateNav(idx);
+}
+
+function updateNav(idx) {
+  // Nav buttons
+  document.querySelectorAll('.nav-scene-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  // Progress dots in every footer
+  for (let s = 0; s < TOTAL_SLIDES; s++) {
+    const pg = document.getElementById('progress-' + s);
+    if (!pg) continue;
+    pg.innerHTML = '';
+    for (let d = 0; d < TOTAL_SLIDES; d++) {
+      const dot = document.createElement('div');
+      dot.className = 'progress-dot' + (d === idx ? ' active' : '');
+      dot.onclick = (function(di){ return function(){ goToSlide(di); }; })(d);
+      pg.appendChild(dot);
+    }
+  }
+}
+
+/* ============================================================
+   INTERSECTION OBSERVER — update nav as user scrolls
+   ============================================================ */
+(function() {
+  const slides = [];
+  for (let i = 0; i < TOTAL_SLIDES; i++) {
+    const el = document.getElementById('slide-' + i);
+    if (el) slides.push({ idx: i, el });
+  }
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && e.intersectionRatio > 0.3) {
+        const found = slides.find(s => s.el === e.target);
+        if (found) updateNav(found.idx);
+      }
+    });
+  }, { threshold: 0.3 });
+  slides.forEach(s => obs.observe(s.el));
+})();
+
+/* ============================================================
+   PARTICLE SYSTEM
+   ============================================================ */
+(function() {
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+
+  const particles = Array.from({ length: 70 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.4 + 0.3,
+    vx: (Math.random() - 0.5) * 0.25,
+    vy: -(Math.random() * 0.35 + 0.1),
+    alpha: Math.random() * 0.5 + 0.1,
+    gold: Math.random() < 0.75,
+    phase: Math.random() * Math.PI * 2,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = Date.now() / 1000;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.y < -5) { p.y = canvas.height + 5; p.x = Math.random() * canvas.width; }
+      if (p.x < -5) p.x = canvas.width + 5;
+      if (p.x > canvas.width + 5) p.x = -5;
+      const a = p.alpha * (0.4 + 0.6 * Math.sin(t * 1.2 + p.phase));
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.gold ? '#c9a84c' : '#c0392b';
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ============================================================
+   MYSTERY VOTE
+   ============================================================ */
+function castVote(choice) {
+  const msgs = {
+    yes: [
+      "Een romanticus! Arturs beste ridder verdiende zijn prinses. 🥂",
+      "De troubadours zijn het met je eens — liefde overwon alles. ❤️",
+      "Het schaakbord zong mee op het huwelijksfeest. ♟️",
+    ],
+    no: [
+      "Een cynicus! Het verhaal is rijker door zijn open einde. 🌑",
+      "De mooiste liefdesverhalen leven in het onuitgesproken. 🖤",
+      "Het perkament koos voor stilte. Jij ook. ✒️",
+    ]
+  };
+  const list = msgs[choice];
+  const msg  = list[Math.floor(Math.random() * list.length)];
+  const el   = document.getElementById('vote-result');
+  el.textContent = msg;
+  el.style.color = choice === 'yes' ? 'var(--gold)' : '#e07070';
+  el.classList.add('show');
+}
+
+/* ============================================================
+   SOUND TOGGLE (visueel)
+   ============================================================ */
+let soundOn = false;
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+updateNav(0);
+
+/* ============================================================
+   KEYBOARD NAVIGATION
+   ============================================================ */
+document.addEventListener('keydown', function(e) {
+  const slides = [];
+  for (let i = 0; i < TOTAL_SLIDES; i++) {
+    const el = document.getElementById('slide-' + i);
+    if (el) slides.push(el);
+  }
+  // Find current slide (most visible)
+  let currentIdx = 0;
+  let bestRatio = 0;
+  slides.forEach((el, i) => {
+    const rect = el.getBoundingClientRect();
+    const vis = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+    if (vis > bestRatio) { bestRatio = vis; currentIdx = i; }
+  });
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
+    e.preventDefault();
+    if (currentIdx < TOTAL_SLIDES - 1) goToSlide(currentIdx + 1);
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+    e.preventDefault();
+    if (currentIdx > 0) goToSlide(currentIdx - 1);
+  }
+});
+</script>
+</body>
+</html>
